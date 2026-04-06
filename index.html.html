@@ -23,6 +23,8 @@
   --red-lt:     #e74c3c;
   --teal:       #0d8a6b;
   --gold:       #c08a2a;
+  --slate:      #5b6a7a;
+  --slate-lt:   #7a8a9a;
   --text-dark:  #2c1a0a;
   --text-mid:   #5c3d20;
   --text-soft:  #8a6a4a;
@@ -217,7 +219,7 @@ main { position:relative; z-index:1; padding:26px 32px; max-width:1700px; margin
 
 /* ── STATS ── */
 .stats-grid {
-  display:grid; grid-template-columns:repeat(5,1fr); gap:15px;
+  display:grid; grid-template-columns:repeat(6,1fr); gap:15px;
   margin-bottom:24px;
 }
 .stat-card {
@@ -601,6 +603,12 @@ function doPost(e) {
       <div class="stat-value" id="statReturn">0</div>
       <div class="stat-sub">Perlu revisi</div>
     </div>
+    <div class="stat-card" style="--top-bar:var(--slate);">
+      <div class="stat-icon">🚫</div>
+      <div class="stat-label">Batal / Ditolak</div>
+      <div class="stat-value" id="statCancelled">0</div>
+      <div class="stat-sub">Tidak dilaksanakan</div>
+    </div>
     <div class="stat-card" style="--top-bar:var(--brown-300);">
       <div class="stat-icon">🌍</div>
       <div class="stat-label">Negara Tujuan</div>
@@ -621,6 +629,7 @@ function doPost(e) {
       <option value="Baru">Disetujui</option>
       <option value="Dalam Proses">Dalam Proses</option>
       <option value="Dikembalikan">Dikembalikan</option>
+      <option value="Batal">Batal / Ditolak</option>
       <option value="Draft">Draft / Konsep</option>
       <option value="Ralat">Ralat</option>
     </select>
@@ -751,6 +760,7 @@ function doPost(e) {
             <option value="Baru (Disetujui)">Baru (Disetujui)</option>
             <option value="Ralat (Disetujui)">Ralat (Disetujui)</option>
             <option value="Dikembalikan">Dikembalikan</option>
+            <option value="Batal / Ditolak">Batal / Ditolak</option>
           </select>
         </div>
         <div class="fg"><label class="form-lbl">Laporan SIMPEL</label>
@@ -910,6 +920,7 @@ function statusStyle(s) {
   if (s.includes("Disetujui")) return {bg:"rgba(13,138,107,0.09)", color:"#0a7a5a", dot:"#0d8a6b"};
   if (s === "Dalam Proses")   return {bg:"rgba(192,138,42,0.10)", color:"#8a5f10", dot:"#c08a2a"};
   if (s === "Dikembalikan")   return {bg:"rgba(192,57,43,0.09)",  color:"#922b21", dot:"#c0392b"};
+  if (s.includes("Batal") || s.includes("Ditolak")) return {bg:"rgba(91,106,122,0.10)", color:"#3d4f5f", dot:"#5b6a7a"};
   if (s.includes("Draft"))    return {bg:"rgba(160,120,80,0.08)", color:"#7a5535", dot:"#a07850"};
   return {bg:"rgba(26,63,122,0.09)", color:"#0a3060", dot:"#1a3f7a"};
 }
@@ -1031,11 +1042,12 @@ function animCount(id, target) {
 }
 
 function renderStats() {
-  animCount("statTotal",    db.length);
-  animCount("statApproved", db.filter(d=>d.status&&d.status.includes("Disetujui")).length);
-  animCount("statProcess",  db.filter(d=>d.status==="Dalam Proses").length);
-  animCount("statReturn",   db.filter(d=>d.status==="Dikembalikan").length);
-  animCount("statCountry",  [...new Set(db.map(d=>d.negara).filter(Boolean))].length);
+  animCount("statTotal",     db.length);
+  animCount("statApproved",  db.filter(d=>d.status&&d.status.includes("Disetujui")).length);
+  animCount("statProcess",   db.filter(d=>d.status==="Dalam Proses").length);
+  animCount("statReturn",    db.filter(d=>d.status==="Dikembalikan").length);
+  animCount("statCancelled", db.filter(d=>d.status&&(d.status.includes("Batal")||d.status.includes("Ditolak"))).length);
+  animCount("statCountry",   [...new Set(db.map(d=>d.negara).filter(Boolean))].length);
 }
 
 function renderTable(highlight=false) {
@@ -1126,10 +1138,13 @@ function renderCharts() {
   // Donut
   const sm={};
   db.forEach(d=>{
-    const k=(d.status||"").includes("Disetujui")?"Disetujui":(d.status||"Lainnya");
+    let k;
+    if ((d.status||"").includes("Disetujui")) k = "Disetujui";
+    else if ((d.status||"").includes("Batal") || (d.status||"").includes("Ditolak")) k = "Batal / Ditolak";
+    else k = d.status || "Lainnya";
     sm[k]=(sm[k]||0)+1;
   });
-  const sc={"Disetujui":"#0d8a6b","Dalam Proses":"#c08a2a","Dikembalikan":"#c0392b","Draft / Konsep":"#a07850"};
+  const sc={"Disetujui":"#0d8a6b","Dalam Proses":"#c08a2a","Dikembalikan":"#c0392b","Batal / Ditolak":"#5b6a7a","Draft / Konsep":"#a07850"};
   const total=db.length||1;
   const circ=2*Math.PI*15.9;
   let off=25, paths="", items=[];
